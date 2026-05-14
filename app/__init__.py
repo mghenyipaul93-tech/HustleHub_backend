@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
@@ -34,6 +34,19 @@ def create_app():
     jwt.init_app(app)
     CORS(app)
     Swagger(app)
+
+    # JWT error handlers
+    @jwt.unauthorized_loader
+    def unauthorized_response(callback):
+        return jsonify({"error": "Missing or invalid token"}), 401
+
+    @jwt.invalid_token_loader
+    def invalid_token_response(callback):
+        return jsonify({"error": "Invalid token"}), 401
+
+    @jwt.expired_token_loader
+    def expired_token_response(jwt_header, jwt_payload):
+        return jsonify({"error": "Token has expired"}), 401
 
     from app.routes import main
     from app.auth import auth
