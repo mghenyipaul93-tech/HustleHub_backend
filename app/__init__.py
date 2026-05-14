@@ -5,6 +5,9 @@ from flask_cors import CORS
 from flasgger import Swagger
 from dotenv import load_dotenv
 import os
+from flask_bcrypt import Bcrypt
+
+bcrypt = Bcrypt()
 
 load_dotenv()
 
@@ -27,7 +30,7 @@ def create_app():
     migrate.init_app(app, db)
     CORS(app)
     Swagger(app)
-
+    bcrypt.init_app(app)
     from app.routes import main
     app.register_blueprint(main)
 
