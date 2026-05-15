@@ -1,4 +1,4 @@
-from app import db, bcrypt
+from app import db
 from datetime import datetime
 
 class User(db.Model):
@@ -13,10 +13,14 @@ class User(db.Model):
     role          = db.Column(db.String(20), nullable=False, default="user")
     created_at    = db.Column(db.DateTime, default=datetime.utcnow)
 
+    favorites     = db.relationship("Favorite", back_populates="user", cascade="all, delete-orphan")
+
     def set_password(self, raw_password):
+        from app import bcrypt
         self.password = bcrypt.generate_password_hash(raw_password).decode("utf-8")
 
     def check_password(self, raw_password):
+        from app import bcrypt
         return bcrypt.check_password_hash(self.password, raw_password)
 
     def is_admin(self):
@@ -31,4 +35,27 @@ class User(db.Model):
             "profile_image": self.profile_image,
             "role":          self.role,
             "created_at":    self.created_at.isoformat(),
+        }
+
+
+class Favorite(db.Model):
+    __tablename__ = "favorites"
+
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    item_id    = db.Column(db.String(100), nullable=False)
+    item_type  = db.Column(db.String(50), nullable=False)  # "mentor" or "book"
+    title      = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", back_populates="favorites")
+
+    def to_dict(self):
+        return {
+            "id":         self.id,
+            "user_id":    self.user_id,
+            "item_id":    self.item_id,
+            "item_type":  self.item_type,
+            "title":      self.title,
+            "created_at": self.created_at.isoformat(),
         }
