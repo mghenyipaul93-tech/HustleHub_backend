@@ -47,10 +47,12 @@ def create_app():
     @jwt.expired_token_loader
     def expired_token_response(jwt_header, jwt_payload):
         return jsonify({"error": "Token has expired"}), 401
-
+    
+    from app.favorites import favorites
     from app.routes import main
     from app.auth import auth
     app.register_blueprint(main)
     app.register_blueprint(auth)
+    app.register_blueprint(favorites)
 
     return app
