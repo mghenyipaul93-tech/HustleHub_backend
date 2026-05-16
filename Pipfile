@@ -13,11 +13,11 @@ flask-cors = "*"
 flask-bcrypt = "*"
 psycopg2-binary = "*"
 python-dotenv = "*"
-cloudinary = "*"
 sendgrid = "*"
 flasgger = "*"
 marshmallow = "*"
 gunicorn = "*"
+cloudinary = "*"
 
 [dev-packages]
 

@@ -1,24 +1,36 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import (
+    create_access_token,
+    jwt_required,
+    get_jwt_identity
+)
+
 from app import db
 from app.models import User
 from app.middleware import admin_required
 
+import cloudinary.uploader
+from app.cloudinary_config import *
+
 auth = Blueprint("auth", __name__)
+
 
 @auth.post("/api/auth/register")
 def register():
     data = request.get_json()
 
-    # validation
     if not data.get("full_name"):
         return jsonify({"error": "Full name is required"}), 400
+
     if not data.get("username"):
         return jsonify({"error": "Username is required"}), 400
+
     if not data.get("email"):
         return jsonify({"error": "Email is required"}), 400
+
     if not data.get("password"):
         return jsonify({"error": "Password is required"}), 400
+
     if len(data["password"]) < 6:
         return jsonify({"error": "Password must be at least 6 characters"}), 400
 
@@ -29,10 +41,11 @@ def register():
         return jsonify({"error": "Username already taken"}), 409
 
     user = User(
-        full_name = data["full_name"],
-        username  = data["username"],
-        email     = data["email"],
+        full_name=data["full_name"],
+        username=data["username"],
+        email=data["email"],
     )
+
     user.set_password(data["password"])
 
     db.session.add(user)
@@ -42,8 +55,8 @@ def register():
 
     return jsonify({
         "message": "Account created!",
-        "token":   token,
-        "user":    user.to_dict()
+        "token": token,
+        "user": user.to_dict()
     }), 201
 
 
@@ -53,6 +66,7 @@ def login():
 
     if not data.get("email"):
         return jsonify({"error": "Email is required"}), 400
+
     if not data.get("password"):
         return jsonify({"error": "Password is required"}), 400
 
@@ -65,8 +79,8 @@ def login():
 
     return jsonify({
         "message": "Login successful!",
-        "token":   token,
-        "user":    user.to_dict()
+        "token": token,
+        "user": user.to_dict()
     }), 200
 
 
@@ -74,7 +88,9 @@ def login():
 @jwt_required()
 def me():
     user_id = int(get_jwt_identity())
-    user    = User.query.get_or_404(user_id)
+
+    user = User.query.get_or_404(user_id)
+
     return jsonify(user.to_dict()), 200
 
 
@@ -83,3 +99,29 @@ def me():
 @admin_required
 def admin_only():
     return jsonify({"message": "Welcome Admin!"}), 200
+
+
+@auth.post("/api/auth/upload-profile-image")
+@jwt_required()
+def upload_profile_image():
+    user_id = int(get_jwt_identity())
+
+    user = User.query.get_or_404(user_id)
+
+    if "image" not in request.files:
+        return jsonify({"error": "Image file is required"}), 400
+
+    image = request.files["image"]
+
+    upload_result = cloudinary.uploader.upload(image)
+
+    image_url = upload_result["secure_url"]
+
+    user.profile_image = image_url
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Profile image uploaded!",
+        "profile_image": image_url
+    }), 200
