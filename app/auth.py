@@ -8,9 +8,11 @@ from flask_jwt_extended import (
 from app import db
 from app.models import User
 from app.middleware import admin_required
+from app.send_email import send_welcome_email
 
 import cloudinary.uploader
 from app.cloudinary_config import *
+
 
 auth = Blueprint("auth", __name__)
 
@@ -50,6 +52,8 @@ def register():
 
     db.session.add(user)
     db.session.commit()
+
+    send_welcome_email(user.email, user.username)
 
     token = create_access_token(identity=str(user.id))
 
