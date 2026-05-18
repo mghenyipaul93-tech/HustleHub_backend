@@ -92,24 +92,62 @@ def login():
 @jwt_required()
 def me():
     user_id = int(get_jwt_identity())
-
     user = User.query.get_or_404(user_id)
 
     return jsonify(user.to_dict()), 200
 
 
-@auth.get("/api/auth/admin")
+@auth.get("/api/profile")
 @jwt_required()
-@admin_required
-def admin_only():
-    return jsonify({"message": "Welcome Admin!"}), 200
+def get_profile():
+    user_id = int(get_jwt_identity())
+    user = User.query.get_or_404(user_id)
+
+    return jsonify(user.to_dict()), 200
+
+
+@auth.patch("/api/profile")
+@jwt_required()
+def update_profile():
+    user_id = int(get_jwt_identity())
+    user = User.query.get_or_404(user_id)
+
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "Request body is required"}), 400
+
+    if data.get("full_name"):
+        user.full_name = data.get("full_name")
+
+    if data.get("username"):
+        existing_username = User.query.filter_by(username=data.get("username")).first()
+
+        if existing_username and existing_username.id != user.id:
+            return jsonify({"error": "Username already taken"}), 409
+
+        user.username = data.get("username")
+
+    if data.get("email"):
+        existing_email = User.query.filter_by(email=data.get("email")).first()
+
+        if existing_email and existing_email.id != user.id:
+            return jsonify({"error": "Email already registered"}), 409
+
+        user.email = data.get("email")
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Profile updated!",
+        "user": user.to_dict()
+    }), 200
 
 
 @auth.post("/api/auth/upload-profile-image")
 @jwt_required()
 def upload_profile_image():
     user_id = int(get_jwt_identity())
-
     user = User.query.get_or_404(user_id)
 
     if "image" not in request.files:
@@ -127,5 +165,13 @@ def upload_profile_image():
 
     return jsonify({
         "message": "Profile image uploaded!",
-        "profile_image": image_url
+        "profile_image": image_url,
+        "user": user.to_dict()
     }), 200
+
+
+@auth.get("/api/auth/admin")
+@jwt_required()
+@admin_required
+def admin_only():
+    return jsonify({"message": "Welcome Admin!"}), 200
