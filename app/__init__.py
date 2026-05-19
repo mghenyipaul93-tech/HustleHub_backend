@@ -6,9 +6,8 @@ from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager
 from flasgger import Swagger
 from dotenv import load_dotenv
-import os
 from datetime import timedelta
-
+import os
 
 load_dotenv()
 
@@ -21,14 +20,11 @@ jwt = JWTManager()
 def create_app():
     app = Flask(__name__)
 
+
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret")
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    app.config["JWT_SECRET_KEY"] = os.getenv(
-        "JWT_SECRET_KEY",
-        "jwt-dev-secret"
-    )
-
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "jwt-dev-secret")
     app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=24)
 
     app.config["SWAGGER"] = {
@@ -42,37 +38,31 @@ def create_app():
     bcrypt.init_app(app)
     jwt.init_app(app)
 
-    CORS(app)
+    CORS(app, origins=[
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+    ])
     Swagger(app)
-
-    # JWT error handlers
 
     @jwt.unauthorized_loader
     def unauthorized_response(callback):
-        return jsonify({
-            "error": "Missing or invalid token"
-        }), 401
+        return jsonify({"error": "Missing or invalid token"}), 401
 
     @jwt.invalid_token_loader
     def invalid_token_response(callback):
-        return jsonify({
-            "error": "Invalid token"
-        }), 401
+        return jsonify({"error": "Invalid token"}), 401
 
     @jwt.expired_token_loader
     def expired_token_response(jwt_header, jwt_payload):
-        return jsonify({
-            "error": "Token has expired"
-        }), 401
-
-    # Blueprints
+        return jsonify({"error": "Token has expired"}), 401
 
     from app.routes import main
     from app.auth import auth
     from app.favorites import favorites
     from app.mentor_profiles import mentor_profiles
     from app.admin import admin
-
 
     app.register_blueprint(main)
     app.register_blueprint(auth)
