@@ -20,6 +20,19 @@ class User(db.Model):
         cascade="all, delete-orphan"
     )
 
+    mentor_profile = db.relationship(
+        "MentorProfile",
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
+
+    reviews = db.relationship(
+        "Review",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
     def set_password(self, raw_password):
         from app import bcrypt
         self.password = bcrypt.generate_password_hash(raw_password).decode("utf-8")
@@ -30,6 +43,9 @@ class User(db.Model):
 
     def is_admin(self):
         return self.role == "admin"
+
+    def is_mentor(self):
+        return self.role == "mentor"
 
     def to_dict(self):
         return {
@@ -51,7 +67,6 @@ class Favorite(db.Model):
 
     item_id = db.Column(db.String(100), nullable=False)
     item_type = db.Column(db.String(50), nullable=False)
-
     title = db.Column(db.String(255), nullable=False)
 
     cover = db.Column(db.String(500), nullable=True)
@@ -85,5 +100,99 @@ class Favorite(db.Model):
             "title": self.title,
             "author": self.author or "Unknown Author",
             "cover": self.cover or "https://placehold.co/250x340?text=No+Image",
+            "created_at": self.created_at.isoformat(),
+        }
+
+
+class MentorProfile(db.Model):
+    __tablename__ = "mentor_profiles"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False,
+        unique=True
+    )
+
+    bio = db.Column(db.Text, nullable=True)
+    niche = db.Column(db.String(120), nullable=True)
+    skills = db.Column(db.String(255), nullable=True)
+    availability = db.Column(db.String(120), nullable=True)
+    price = db.Column(db.String(80), nullable=True)
+
+    github_url = db.Column(db.String(500), nullable=True)
+    linkedin_url = db.Column(db.String(500), nullable=True)
+    portfolio_url = db.Column(db.String(500), nullable=True)
+    contact_email = db.Column(db.String(120), nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", back_populates="mentor_profile")
+
+    reviews = db.relationship(
+        "Review",
+        back_populates="mentor_profile",
+        cascade="all, delete-orphan"
+    )
+
+    def average_rating(self):
+        if not self.reviews:
+            return 0
+
+        total = sum(review.rating for review in self.reviews)
+        return round(total / len(self.reviews), 1)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "full_name": self.user.full_name,
+            "username": self.user.username,
+            "profile_image": self.user.profile_image,
+            "bio": self.bio,
+            "niche": self.niche,
+            "skills": self.skills,
+            "availability": self.availability,
+            "price": self.price,
+            "github_url": self.github_url,
+            "linkedin_url": self.linkedin_url,
+            "portfolio_url": self.portfolio_url,
+            "contact_email": self.contact_email,
+            "average_rating": self.average_rating(),
+            "review_count": len(self.reviews),
+            "reviews": [review.to_dict() for review in self.reviews],
+            "created_at": self.created_at.isoformat(),
+        }
+
+
+class Review(db.Model):
+    __tablename__ = "reviews"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    mentor_profile_id = db.Column(
+        db.Integer,
+        db.ForeignKey("mentor_profiles.id"),
+        nullable=False
+    )
+
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+
+    rating = db.Column(db.Integer, nullable=False)
+    comment = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    mentor_profile = db.relationship("MentorProfile", back_populates="reviews")
+    user = db.relationship("User", back_populates="reviews")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "mentor_profile_id": self.mentor_profile_id,
+            "user_id": self.user_id,
+            "username": self.user.username,
+            "rating": self.rating,
+            "comment": self.comment,
             "created_at": self.created_at.isoformat(),
         }
