@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import os
 from datetime import timedelta
 
+
 load_dotenv()
 
 db = SQLAlchemy()
@@ -70,10 +71,13 @@ def create_app():
     from app.auth import auth
     from app.favorites import favorites
     from app.mentor_profiles import mentor_profiles
+    from app.admin import admin
+
 
     app.register_blueprint(main)
     app.register_blueprint(auth)
     app.register_blueprint(favorites)
     app.register_blueprint(mentor_profiles)
+    app.register_blueprint(admin)
 
     return app
